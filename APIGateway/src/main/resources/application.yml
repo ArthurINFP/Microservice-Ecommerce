@@ -1,0 +1,60 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true  # Enables service discovery via Eureka
+      routes:
+        - id: product-service
+          uri: lb://ProductService  # Use the service name registered in Eureka
+          predicates:
+            - Path=/product/**  # This routes all /product/** paths to the ProductService
+          filters:
+            - StripPrefix=1
+        - id: user-service
+          uri: lb://UserService  # Use the service name registered in Eureka
+          predicates:
+            - Path=/user/**  # This routes all /user/** paths to the UserService
+          filters:
+            - StripPrefix=1
+        - id: cart-service
+          uri: lb://CartService  # Use the service name registered in Eureka
+          predicates:
+            - Path=/cart/**  # This routes all /user/** paths to the UserService
+          filters:
+            - StripPrefix=1
+        - id: order-service
+          uri: lb://OrderService  # Use the service name registered in Eureka
+          predicates:
+            - Path=/order/**  # This routes all /user/** paths to the UserService
+          filters:
+            - StripPrefix=1
+        - id: payment-service
+          uri: lb://PaymentService  # Use the service name registered in Eureka
+          predicates:
+            - Path=/payment/**  # This routes all /user/** paths to the UserService
+          filters:
+            - StripPrefix=1
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8888/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway.route.RouteDefinitionLocator: INFO
+    org.springframework.cloud.gateway: TRACE
