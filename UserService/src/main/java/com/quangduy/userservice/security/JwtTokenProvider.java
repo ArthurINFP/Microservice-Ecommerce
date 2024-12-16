@@ -40,11 +40,7 @@ public class JwtTokenProvider {
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles",user.getRole().name());
         claims.put("userId",user.getId());
-
-        System.out.println("JWT Claims: " + claims);
-
         return Jwts.builder()
-                .setSubject(user.getEmail())
                 .addClaims(claims)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)

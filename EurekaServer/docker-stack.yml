@@ -1,0 +1,190 @@
+version: '3.8'
+
+services:
+  eureka-server:
+    image: eureka-server:latest
+    ports:
+      - "8888:8888"
+    networks:
+      - swarm-app-network
+    environment:
+      - EUREKA_SERVER_PORT=8888
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_MAX_CONNECTIONS: 200
+      POSTGRES_USER: default_use
+      POSTGRES_PASSWORD: default_password
+      POSTGRES_DB: default_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db_init/:/docker-entrypoint-initdb.d/
+    networks:
+      - swarm-app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "80:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - swarm-app-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  product-service:
+    image: product-service:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka-server
+      - postgres
+      - api-gateway
+    networks:
+      - swarm-app-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/product_service_db
+      SPRING_DATASOURCE_USERNAME: product_service_user
+      SPRING_DATASOURCE_PASSWORD: product_password
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8888/eureka/
+      SPRING_PROFILES_ACTIVE: docker
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  user-service:
+    image: user-service:latest
+    ports:
+      - "8082:8080"
+    depends_on:
+      - eureka-server
+      - postgres
+    networks:
+      - swarm-app-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/user_service_db
+      SPRING_DATASOURCE_USERNAME: user_service_user
+      SPRING_DATASOURCE_PASSWORD: user_password
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8888/eureka/
+      SPRING_PROFILES_ACTIVE: docker
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  cart-service:
+    image: cart-service:latest
+    ports:
+      - "8083:8080"
+    depends_on:
+      - eureka-server
+      - postgres
+    networks:
+      - swarm-app-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cart_service_db
+      SPRING_DATASOURCE_USERNAME: cart_service_user
+      SPRING_DATASOURCE_PASSWORD: cart_password
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8888/eureka/
+      SPRING_PROFILES_ACTIVE: docker
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  order-service:
+    image: order-service:latest
+    ports:
+      - "8084:8080"
+    depends_on:
+      - eureka-server
+      - postgres
+    networks:
+      - swarm-app-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/order_service_db
+      SPRING_DATASOURCE_USERNAME: order_service_user
+      SPRING_DATASOURCE_PASSWORD: order_password
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8888/eureka/
+      SPRING_PROFILES_ACTIVE: docker
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  payment-service:
+    image: payment-service:latest
+    ports:
+      - "8085:8080"
+    depends_on:
+      - eureka-server
+      - postgres
+    networks:
+      - swarm-app-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payment_service_db
+      SPRING_DATASOURCE_USERNAME: payment_service_user
+      SPRING_DATASOURCE_PASSWORD: payment_password
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8888/eureka/
+      SPRING_PROFILES_ACTIVE: docker
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  api-gateway:
+    image: api-gateway:latest
+    ports:
+      - "8081:8081"
+    depends_on:
+      - eureka-server
+    networks:
+      - swarm-app-network
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8888/eureka/
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_REDIS_HOST=redis # Hostname for Redis service
+      - SPRING_REDIS_PORT=6379  # Default Redis port
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379" # Expose Redis on port 6379
+    networks:
+      - swarm-app-network
+    deploy:
+      replicas: 1 # Number of Redis instances
+      placement:
+        constraints: [ node.role == manager ] # Run Redis on the manager node
+
+volumes:
+  pgdata:
+  pgadmin_data:
+
+networks:
+  swarm-app-network:
+    driver: overlay

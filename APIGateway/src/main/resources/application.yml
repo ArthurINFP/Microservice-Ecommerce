@@ -1,8 +1,11 @@
 server:
   port: 8081
 spring:
+  redis:
+    port: 6379
   application:
     name: api-gateway
+
   cloud:
     gateway:
       discovery:
@@ -21,6 +24,11 @@ spring:
             - Path=/user/**  # This routes all /user/** paths to the UserService
           filters:
             - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 2
+                redis-rate-limiter.burstCapacity: 3
+                key-resolver: "#{@remoteAddressKeyResolver}"
         - id: cart-service
           uri: lb://CartService  # Use the service name registered in Eureka
           predicates:
@@ -39,6 +47,9 @@ spring:
             - Path=/payment/**  # This routes all /user/** paths to the UserService
           filters:
             - StripPrefix=1
+  data:
+    redis:
+      host: redis
 eureka:
   client:
     service-url:
